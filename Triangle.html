@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Sierpinski Triangle</title>
+        <style type="text/css">
+        	canvas
+        	{
+        		height:600px;
+        		width:600px;
+        		background-color:#fff;
+        	}
+        </style>
+
+
+    </head>
+    <body>
+    	<h1>This Triangle is made using JavaScript</h1>
+    	<canvas id="canvas"></canvas>
+    	<br>
+    	<script type="text/javascript">
+
+
+        		var K = 3; // number of iterations 0 means only one (outer most) triangle
+        		function main()
+	        	{
+	        		var A = {
+	                    x: 300,
+	                    y: 0
+	                };
+	                var B = {
+	                    x: 0,
+	                    y: 600
+	                };
+	                var C = {
+	                    x: 600,
+	                    y: 600
+	                };
+
+	        		var canvas = initializeCanvas("canvas",600,600);
+	        		drawTriangle(canvas,A,B,C);
+	        		if(K>0)
+	        			fractal(canvas,getMid(A,B),getMid(B,C),getMid(C,A),K);
+	        	}
+	        	main();
+	        	function initializeCanvas(canvasID,width,height)
+	        	{
+					var c = document.getElementById(canvasID);
+					var ctx = c.getContext("2d");
+					ctx.canvas.width=width;
+					ctx.canvas.height=height;
+					return c;
+				}
+
+				// random color function taken from:
+				// http://jsfiddle.net/GP3z8/2/
+				// https://stackoverflow.com/questions/23095637/how-do-you-get-random-rgb-in-javascript
+				function random_rgba() {
+				    var o = Math.round, r = Math.random, s = 255;
+				    return 'rgba(' + o(r()*s) + ',' + o(r()*s) + ',' + o(r()*s) + ',' + r().toFixed(1) + ')';
+				}
+
+				// function to draw triangles
+	        	function drawTriangle(canvas,A,B,C)
+	        	{
+	        		var ctx = canvas.getContext("2d");
+	        		ctx.beginPath();
+	        		ctx.moveTo(A.x, A.y);
+	        		ctx.lineTo(B.x, B.y);
+	        		ctx.lineTo(C.x, C.y);
+	        		ctx.lineTo(A.x, A.y);
+	        		//ctx.closePath(); // make it a closed shape
+	        		ctx.strokeStyle = "red";
+	        		ctx.stroke();
+
+	        		var color = random_rgba();
+	        		ctx.fillStyle = color;
+	        		ctx.fill();
+	        	}
+
+	        	// logic to draw fractals is from https://lodev.org/cgtutor/sierpinski.html
+	        	// concept is the same the way is different
+	        	function fractal(canvas,A,B,C,N)
+	        	{
+
+	        		//for (var i = 0; i < K; i++) {
+	        			//for (var j = 0; j < N; j++) {
+
+	        				drawTriangle(canvas,A,B,C,N);
+	        				if(1 < N)
+	        				{
+
+	        					tC = getMid(A,C);
+	        					tA = addPoints(tC,{x:(A.x-B.x)/2, y:(A.y-B.y)/2});
+	        					tB = addPoints(tC,{x:(C.x-B.x)/2, y:(C.y-B.y)/2});
+	        					fractal(canvas,tA,tB,tC,N-1); // top
+	        					lB = getMid(A,B);
+	        					lA = subtractPoints(lB,{x:(C.x-B.x)/2, y:(C.y-B.y)/2});
+	        					lC = subtractPoints(lB,{x:(C.x-A.x)/2, y:(C.y-A.y)/2});
+
+	        					fractal(canvas,lA,lB,lC,N-1); // left
+	        					rA = getMid(C,B);
+	        					rB = subtractPoints(rA,{x:(A.x-C.x)/2, y:(A.y-C.y)/2});
+	        					rC = subtractPoints(rA,{x:(A.x-B.x)/2, y:(A.y-B.y)/2});
+	        					fractal(canvas,rA,rB,rC,N-1); // right
+
+	        				}
+
+	        		//}
+	        		//}
+	        	}
+	        	function getMid(A,B) // get mid-point of two vectors
+	        	{
+	        		return (A = {x: (A.x+B.x)/2 , y: (A.y + B.y)/2});
+	        	}
+	        	function addPoints(A,B) // add vectors
+	        	{
+	        		return (A = {x: A.x+B.x, y: A.y+B.y});
+	        	}
+	        	function subtractPoints(A,B) // subtract vectors
+	        	{
+	        		return (A = {x: A.x-B.x, y: A.y-B.y});
+	        	}
+
+        </script>
+    </body>
+</html>

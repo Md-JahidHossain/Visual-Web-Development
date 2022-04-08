@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Md Jahid Hossain</title>
+	<style type="text/css">
+		canvas {
+			height: 600px;
+			width: 600px;
+			background: white;
+		}
+
+		body {
+			background: lightgrey;
+		}
+	</style>
+	<script type="text/javascript">
+		var STICKPOSITION = [300, 600]; // Starting Position
+		var STICKLENGTH = 400;
+		var PARTICLES = [];
+		var FINISHED = false;
+
+		function main() {
+
+			var canvas = initializeCanvas('canvas', 600, 600);
+			drawFireStick(canvas, STICKPOSITION, STICKLENGTH);
+			animate(canvas);
+
+		}
+
+		function drawFireStick(canvas, stickPosition, length) {
+			var upperWidth = 5; // for upper part of the stick
+			var lowerWidth = 1;
+
+			drawLine(canvas, [stickPosition[0], stickPosition[1] - 100], length - 100, "#804000", upperWidth);
+			drawLine(canvas, stickPosition, length, "#000000", lowerWidth);
+
+		}
+
+		function initializeCanvas(canvasID, width, height) {
+			var c = document.getElementById(canvasID);
+			var ctx = c.getContext("2d");
+			ctx.canvas.width = width;
+			ctx.canvas.height = height;
+			return c;
+		}
+
+		function drawLine(canvas, from, length, color, width) {
+			var ctx = canvas.getContext("2d");
+			ctx.beginPath();
+			ctx.moveTo(from[0], from[1]);
+			// add length to y because we're creating a straight line
+			ctx.lineTo(from[0], from[1] - length);
+			ctx.lineWidth = width;
+			ctx.lineCap = "round";
+			ctx.strokeStyle = color;
+			ctx.stroke();
+		}
+		class Particle {
+			constructor(loc, vel) {
+				this.location = loc;
+				this.velocity = vel;
+				this.lifespan = 20;
+			}
+			move() {
+				this.location = addVectors(this.location, this.velocity);
+				this.lifespan--;
+				this.opacity--;
+			}
+			draw(canvas) {
+				var opacity = this.lifespan / 3;
+				drawRegularPolygon(canvas, this.location, 4, 8, 2, opacity);
+
+			}
+		}
+
+		function drawRegularPolygon(canvas, location, radius, sides, rotation = 0, opacity = 1) {
+			var ctx = canvas.getContext("2d");
+			ctx.beginPath();
+			var x = location[0] + Math.cos(0 + rotation) * radius;
+			var y = location[1] + Math.sin(0 + rotation) * radius;
+			ctx.moveTo(x, y);
+			sides /= 2;
+			for (var i = Math.PI / sides; i <= Math.PI * 2; i += Math.PI / sides) {
+				var x = location[0] + Math.cos(i + rotation) * radius;
+				var y = location[1] + Math.sin(i + rotation) * radius;
+				ctx.lineTo(x, y);
+			}
+			var x = location[0] + Math.cos(0 + rotation) * radius;
+			var y = location[1] + Math.sin(0 + rotation) * radius;
+			ctx.lineTo(x, y);
+
+			ctx.fillStyle = "rgba(255,255,0," + opacity + ")";
+			//ctx.stroke();
+			ctx.fill();
+		}
+
+		function addVectors(v1, v2) {
+			var newV = [
+				v1[0] + v2[0],
+				v1[1] + v2[1]
+			];
+			return newV;
+		}
+
+		function animate(canvas) {
+			var length = STICKLENGTH;
+			var interval = setInterval(function() {
+
+				var ctx = canvas.getContext("2d");
+				ctx.clearRect(0, 0, 600, 600);
+				drawFireStick(canvas, STICKPOSITION, length);
+
+				if (!FINISHED) {
+					var loc = [STICKPOSITION[0], STICKPOSITION[1] - length--];
+					var vel = [
+						3 * (Math.random() - 0.5),
+						3 * (Math.random() - 0.5)
+					];
+					var part = new Particle(loc, vel);
+					PARTICLES.push(part);
+				} else {
+					PARTICLES = [];
+				}
+				for (var i = 0; i < PARTICLES.length; i++) {
+					PARTICLES[i].move();
+					PARTICLES[i].draw(canvas);
+				}
+				if (length == 100) {
+					FINISHED = true;
+					setTimeout(function() {
+						clearInterval(interval);
+					}, 1000);
+				}
+
+			}, 10);
+		}
+	</script>
+</head>
+
+<body onload="main()">
+	<h1>Burning Fire Stick</h1>
+	<canvas id="canvas"></canvas>
+</body>
+
+</html>

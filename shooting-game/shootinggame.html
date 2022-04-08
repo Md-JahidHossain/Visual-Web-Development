@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Md Jahid Hossain - Shooting Game</title>
+	<style type="text/css">
+		#canvas{
+			height: 600px;
+			width: 600px;
+			background : url("background.png");
+			-webkit-animation: move 10s infinite;
+			-webkit-animation-iteration-count: 3;
+			animation: move 10s infinite;
+			animation-iteration-count: 3;
+			background-repeat: repeat-y;
+		}
+		body{
+			background: lightgrey;
+		}
+		@-webkit-keyframes move{
+			from { background-position: 0 0; }
+			to { background-position: 0 600px; }
+		}
+
+	</style>
+
+	<script type="text/javascript">
+		//Flags to track controls of the Ship
+		var left = false;
+		var right = false;
+		var space = false;
+		var score = 0;
+
+		var intervalCounter = 30;
+
+
+		var CANVAS_SIZE = 600;
+		var LASERS = [];
+		var ENEMIES = [];
+		var EXP = null;
+		class Position{
+			constructor(x,y){
+				this.X = x;
+				this.Y = y;
+			}
+		}
+
+		var heroPosition = new Position(275,550); // starting position on player
+
+		// to draw lasers
+		class LaserParticle{
+			constructor(pos,vel,color){
+				this.Position = pos;
+				this.velocity = vel;
+				this.lifespan=CANVAS_SIZE/10;
+				this.color = color;
+			}
+			draw(canvas,color){
+				drawLine(canvas,[this.Position.X,this.Position.Y],10,this.color);
+			}
+			move(){
+				this.Position.Y -= this.velocity;
+				this.lifespan--;
+			}
+		}
+
+
+		// to draw Enemy Ships
+		class Enemy{
+			constructor(vel){
+				this.Position = new Position(getRandomInt(0,540),0);
+				this.velocity = vel;
+				this.lifespan=CANVAS_SIZE/10;
+			}
+			draw(canvas){
+				var enemy = new Image();
+				enemy.src = "red.png";
+				var ctx = canvas.getContext("2d");
+
+				ctx.drawImage(enemy,this.Position.X,this.Position.Y,50,50);
+
+			}
+			move(){
+				this.Position.Y += this.velocity;
+				this.lifespan--;
+			}
+		}
+		function main(){
+
+			var canvas = initializeCanvas('canvas',CANVAS_SIZE,CANVAS_SIZE);
+			//drawHeroSprites(canvas);
+			// registered on window because on document, canvas needs to be on focus in order to detect keyevent
+			window.addEventListener('keydown', keyDown);
+			window.addEventListener('keyup', keyUp);
+			startGame(canvas);
+
+		}
+		function startGame(canvas){
+			var interval = setInterval(function(){
+				clearCanvas(canvas);
+				if(left){
+					if(heroPosition.X < 10)
+						heroPosition.X = 10;
+					else
+						heroPosition.X -= 10;
+				}
+				if(right){
+					if(heroPosition.X > 540)
+						heroPosition.X = 540;
+					else
+						heroPosition.X += 10;
+				}
+				if(space){
+					laserPosition = new Position(heroPosition.X + 25,heroPosition.Y); // +25 because ship's width is 50
+					var laser = new LaserParticle(laserPosition,15,'green');
+					LASERS.push(laser);
+					var audio = new Audio('fire.mp3');
+					audio.play();
+				}
+				if (detectGameOver(LASERS,heroPosition,ENEMIES)) {
+					clearCanvas(canvas);
+					clearInterval(interval);
+					var s = document.getElementById('score').innerHTML = 'Score: '+ score + ' (Game Over)';
+
+				}
+				if(detectScore(LASERS,ENEMIES))
+				{
+					score++;
+					var s = document.getElementById('score').innerHTML = 'Score: '+ score;
+				}
+
+				LASERS = keepAliveLaserParticles(LASERS);
+
+				for(var i=0;i<LASERS.length;i++){
+					LASERS[i].move();
+					LASERS[i].draw(canvas);
+				}
+				drawHeroSprites(canvas);
+
+
+				if(intervalCounter == 0){
+					var enemies = new Enemy(10);
+					ENEMIES.push(enemies);
+					intervalCounter = 40;
+				}
+				intervalCounter--;
+
+				ENEMIES = keepAliveEnemyShips(ENEMIES);
+
+				for(var i=0;i<ENEMIES.length;i++){
+					ENEMIES[i].move();
+					ENEMIES[i].draw(canvas);
+					if (intervalCounter % 30 == 0) {
+						laserPosition = new Position(ENEMIES[i].Position.X + 25,
+							ENEMIES[i].Position.Y + 50); // +25 because ship's width is 50
+						var laser = new LaserParticle(laserPosition,-15,'red'); // -15 velocity in opposite direction
+						LASERS.push(laser);
+					}
+				}
+
+			},42);
+
+		}
+
+		// exlosion animation
+		function explosion(pos)
+	    {
+	        var expImage = new Image();
+			expImage.src = "effect.png";
+			var canvas = document.getElementById("canvas");
+			// Create sprite
+			exp = sprite({
+				context: canvas.getContext("2d"),
+				width: 3413,
+				height: 340,
+				image: expImage,
+				numberOfFrames: 10,
+				ticksPerFrame: 4,
+				x:pos.X,
+				y:pos.Y
+			});
+			// Load sprite sheet
+			EXP = exp;
+			gameLoop();
+			var audio = new Audio('explosion.mp3');
+			audio.play();
+	    }
+	    function gameLoop () {
+		  window.requestAnimationFrame(gameLoop);
+		  exp.update();
+		  exp.render();
+		}
+	    function sprite (options) {
+
+		var that = {},
+		frameIndex = 0,
+		tickCount = 0,
+		ticksPerFrame = options.ticksPerFrame || 0,
+		numberOfFrames = options.numberOfFrames || 1;
+
+		that.context = options.context;
+		that.width = options.width;
+		that.height = options.height;
+		that.image = options.image;
+		that.x = options.x;
+		that.y = options.y;
+
+		that.update = function () {
+
+            tickCount += 1;
+
+            if (tickCount > ticksPerFrame) {
+                // If the current frame index is in range
+                if (frameIndex < numberOfFrames - 1) {
+                    // Go to the next frame
+                    frameIndex += 1;
+                }
+            }
+            else{
+            	window.cancelAnimationFrame(gameLoop);
+            }
+
+
+        };
+        that.render = function () {
+
+		  // Clear the canvas
+
+
+		  // Draw the animation
+		  that.context.drawImage(
+		    that.image,
+		    frameIndex * that.width / numberOfFrames,
+		    0,
+		    that.width / numberOfFrames,
+		    that.height,
+		    that.x-25,
+		    that.y,
+		    100,
+		    100);
+		};
+
+		return that;
+	}
+		// if an enemy ship is hit
+		function detectScore(lasers,enemies) {
+		    for (var i = lasers.length - 1; i >= 0; i--) {
+		    	for (var j = enemies.length - 1; j >= 0; j--) {
+		    		if(lasers[i].color == 'green')   // check your laser for enemies ship
+			    		if(isHitting(lasers[i].Position,enemies[j].Position))
+			    		{
+			    			explosion(enemies[j].Position);
+			    			ENEMIES.splice(enemies[j]);
+
+			    			return true;
+			    		}
+		    	}
+		    }
+		    return false;
+		}
+		// check if you got hit
+		function detectGameOver(lasers,ship,enemies) {
+		    for (var i = lasers.length - 1; i >= 0; i--) {
+		    	if(lasers[i].color != 'green')   // don't check your own laser for own ship
+			    	if(isHitting(lasers[i].Position,ship))
+			    	{
+			    		explosion(ship);
+			    		stopBackgroundAnimation();
+			    		return true;
+			    	}
+		    }
+
+		    for (var i = enemies.length - 1; i >= 0; i--) {
+		    	// possible point when enemy ship hit to user's ship
+		    	var possibleHit1 = new Position(enemies[i].Position.X,enemies[i].Position.Y+50);
+		    	var possibleHit2 = new Position(enemies[i].Position.X+50,enemies[i].Position.Y+50);
+		    	var possibleHit3 = new Position(enemies[i].Position.X,enemies[i].Position.Y);
+		    	var possibleHit4 = new Position(enemies[i].Position.X+50,enemies[i].Position.Y);
+		    	if(isHitting(possibleHit1,ship)
+		    		|| isHitting(possibleHit2,ship)
+		    		|| isHitting(possibleHit3,ship)
+		    		|| isHitting(possibleHit4,ship)){
+		    		explosion(ship);
+		    		stopBackgroundAnimation();
+		    		return true;
+		    	}
+
+		    }
+		    return false;
+		}
+		// check if a point belongs in a polygon
+		// logic from https://github.com/substack/point-in-polygon (MIT license)
+		function isHitting(point,ship){
+			var vertex = [];
+			vertex.push([ship.X,ship.Y]);
+			vertex.push([ship.X+50,ship.Y]);
+			vertex.push([ship.X,ship.Y+50]);
+			vertex.push([ship.X+50,ship.Y+50]);
+			// ray-casting algorithm based on
+		    // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+
+		    var x = point.X, y = point.Y;
+
+		    var inside = false;
+		    for (var i = 0, j = vertex.length - 1; i < vertex.length; j = i++) {
+		        var xi = vertex[i][0], yi = vertex[i][1];
+		        var xj = vertex[j][0], yj = vertex[j][1];
+
+		        var intersect = ((yi > y) != (yj > y))
+		            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+		        if (intersect) inside = !inside;
+		    }
+
+		    return inside;
+		}
+		// remove ships from memory that are not on the canvas
+		function keepAliveEnemyShips(enemies){
+			var aliveEnemyShips=[];
+			for(var i=0;i<enemies.length;i++){
+				if(enemies[i].lifespan>0){
+					aliveEnemyShips.push(enemies[i]);
+				}
+			}
+			return aliveEnemyShips;
+		}
+		// remove lasers from memory that are not on the canvas
+		function keepAliveLaserParticles(lasers){
+				var aliveLaserParticles=[];
+				for(var i=0;i<lasers.length;i++){
+					if(lasers[i].lifespan>0){
+						aliveLaserParticles.push(lasers[i]);
+					}
+				}
+				return aliveLaserParticles;
+			}
+
+		function keyDown(event){
+			event.preventDefault();
+			if (event.keyCode === 37) { // left
+				left = true;
+			}
+			if (event.keyCode === 39) { // right
+			    right = true;
+			}
+			if (event.keyCode === 32) { // SPACE
+			    space = true;
+			}
+		}
+		function keyUp(event){
+			event.preventDefault();
+			if (event.keyCode === 37) { // left
+				left = false;
+			}
+			if (event.keyCode === 39) { // right
+			    right = false;
+			}
+			if (event.keyCode === 32) { // SPACE
+			    space = false;
+			}
+		}
+		function drawHeroSprites(canvas){
+			var hero = new Image();
+			hero.src = "green.PNG";
+			var ctx = canvas.getContext("2d");
+			hero.onload = function() {
+			   ctx.drawImage(hero,heroPosition.X,heroPosition.Y,50,50);
+			};
+		}
+
+
+		//Mozilla Developer Page
+		function getRandomInt(min, max) {
+		    min = Math.ceil(min);
+		    max = Math.floor(max);
+		    return Math.floor(Math.random() * (max - min + 1)) + min;
+		}
+		function initializeCanvas(canvasID,width,height){
+			var c = document.getElementById(canvasID);
+			var ctx = c.getContext("2d");
+			ctx.canvas.width=width;
+			ctx.canvas.height=height;
+			return c;
+		}
+		function clearCanvas(canvas){
+			var ctx = canvas.getContext("2d");
+			ctx.clearRect(0,0,CANVAS_SIZE,CANVAS_SIZE);
+		}
+
+		function drawLine(canvas,from,length,color){
+			var canvas = document.getElementById('canvas');
+			var ctx = canvas.getContext("2d");
+			ctx.beginPath();
+			ctx.moveTo(from[0], from[1]);
+			// add length to y because we're creating a straight line
+			ctx.lineTo(from[0], from[1]-length);
+			ctx.strokeStyle = color;
+			ctx.stroke();
+		}
+		function stopBackgroundAnimation() {
+		  document.getElementById('canvas').style.webkitAnimationPlayState = 'paused';
+		}
+
+	</script>
+</head>
+
+<body onload="main()">
+
+
+	<h1>Playing Shooting Game</h1>
+	<h2 id="score">Score:</h2>
+	<canvas id="canvas"></canvas>
+	<h4>Instructions: Use Left & Right arrow keys to move and space to shoot.</h4>
+
+</body>
+</html>
